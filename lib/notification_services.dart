@@ -1,5 +1,6 @@
 import 'dart:convert';
-
+import 'dart:html';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -34,17 +35,21 @@ class NotificationService {
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
       print('Foreground message received :${message.messageId}');
+      await _showLocalNotification(message);
+      await saveMessageToFirestore(message);
     });
 
     FirebaseMessaging.instance.getInitialMessage().then((message) async {
       if (message != null) {
         print(
             'App opened from terminated state via notification :${message.messageId}');
+        await saveMessageToFirestore(message);
       }
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
       print('onMessageOpenedApp :${message.messageId}');
+      await saveMessageToFirestore(message);
     });
   }
 
@@ -68,6 +73,35 @@ class NotificationService {
         notification.title, notification.body, platformDetails,
         payload: message.data.isNotEmpty ? jsonEncode(message.data) : null);
   }
-  
 
+  static Future<void> saveMessageToFirestore(RemoteMessage message) async {
+    final data = message.data;
+    final title = message.notification?.title ?? data['title'] ?? 'No title';
+    final body = message.notification?.body ?? data['body'] ?? 'No body';
+
+    final doc = FirebaseFirestore.instance.collection('notofication').doc();
+    await doc.set({
+      'title': title,
+      'body': body,
+      'data': data,
+      'receivedAt': FieldValue.serverTimestamp(),
+      'read': false,
+    });
+  }
+
+  static Future<void> saveMessageToFirestoreFromBackground(
+      RemoteMessage message) async {
+    final data = message.data;
+    final title = message.notification?.title ?? data['title'] ?? 'No title';
+    final body = message.notification?.body ?? data['body'] ?? 'No body';
+
+    final doc = FirebaseFirestore.instance.collection('notification').doc();
+    await doc.set({
+      'title': title,
+      'body': body,
+      'data': data,
+      'receivedAt': FieldValue.serverTimestamp(),
+      'read': false,
+    });
+  }
 }
