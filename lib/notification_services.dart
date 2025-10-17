@@ -78,7 +78,7 @@ class NotificationService {
     final title = message.notification?.title ?? data['title'] ?? 'No title';
     final body = message.notification?.body ?? data['body'] ?? 'No body';
 
-    final doc = FirebaseFirestore.instance.collection('notofication').doc();
+    final doc = FirebaseFirestore.instance.collection('notification').doc();
     await doc.set({
       'title': title,
       'body': body,
